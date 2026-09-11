@@ -2,13 +2,15 @@
 
 import * as THREE from "three";
 import type { MapExampleOptions } from "@/lib/sources/examples/createMapExample";
+import { withBasePath } from "@/lib/site";
 import { DemoPanel, type DemoProps, useMapExample } from "./ExampleShared";
 
 const TILESET_URL =
-  process.env.NEXT_PUBLIC_XIAMEN_BUILDINGS_URL ?? "/models/xiamen-buildings/tileset.json";
-const ROAD_URL = "/data/xiamen/roads.geojson";
-const WATER_URL = "/data/xiamen/water.geojson";
-const RAILWAY_URL = "/data/xiamen/railway.geojson";
+  process.env.NEXT_PUBLIC_XIAMEN_BUILDINGS_URL ??
+  withBasePath("/models/xiamen-buildings/tileset.json");
+const ROAD_URL = withBasePath("/data/xiamen/roads.geojson");
+const WATER_URL = withBasePath("/data/xiamen/water.geojson");
+const RAILWAY_URL = withBasePath("/data/xiamen/railway.geojson");
 
 const DATA_CENTER = [118.1395095, 24.4997611] as const;
 

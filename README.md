@@ -2,6 +2,17 @@
 
 Next CAD 是一个基于 Next.js 16、React 19 和 Three.js 的浏览器端三维 GIS / CAD 示例项目。项目重点实现了 Web Mercator 坐标管理、瓦片图层调度、Cesium quantized-mesh 地形、3D Tiles、绘制工具和图层树管理。
 
+## 在线访问
+
+GitHub Pages 会同时部署示例页面和 API 文档：
+
+- 项目首页：<https://chenlong2019.github.io/next-cad/>
+- GIS 示例：<https://chenlong2019.github.io/next-cad/examples/>
+- API 文档：<https://chenlong2019.github.io/next-cad/docs/>
+- Google 瓦片全屏示例：<https://chenlong2019.github.io/next-cad/examples/google-tiles/fullscreen/>
+
+推送到 `master` 分支后，`.github/workflows/deploy-pages.yml` 会自动构建并发布 `dist/`。
+
 ## 主要能力
 
 - Web Mercator 与 WGS84 坐标互转，使用局部原点降低 Three.js 浮点精度问题。
@@ -293,6 +304,22 @@ trailingSlash: true;
 - 默认 Next.js 图片优化服务。
 
 静态服务器需要正确支持 `/examples/google-tiles/` 这类目录路径，并返回对应的 `index.html`。由于是静态导出，不建议使用 `next start` 作为生产部署方式。
+
+### GitHub Pages
+
+仓库使用 GitHub Actions 部署到项目子路径：
+
+```text
+https://chenlong2019.github.io/next-cad/
+```
+
+工作流构建时设置：
+
+```env
+NEXT_PUBLIC_BASE_PATH=/next-cad
+```
+
+该变量会让 Next.js 路由、静态资源以及 `public/models`、`public/data` 中的示例数据统一从 `/next-cad/` 访问。首次部署需要在仓库的 `Settings -> Pages` 中将 Source 设为 `GitHub Actions`。
 
 ## 常见问题
 

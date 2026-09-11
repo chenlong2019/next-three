@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
+import { withBasePath } from "@/lib/site";
 import styles from "./ApiDocs.module.css";
 
 export interface ApiDocEntry {
@@ -229,7 +230,7 @@ function renderInline(
         return (
           <a
             key={key}
-            href={`/docs?doc=${encodeURIComponent(docId)}`}
+            href={`${withBasePath("/docs/")}?doc=${encodeURIComponent(docId)}`}
             onClick={(event) => {
               event.preventDefault();
               onNavigate(docId);
@@ -379,7 +380,11 @@ export default function ApiDocsExplorer({ docs, initialDocId }: ApiDocsExplorerP
 
   const selectDoc = useCallback((id: string) => {
     setSelectedId(id);
-    window.history.replaceState(null, "", `/docs?doc=${encodeURIComponent(id)}`);
+    window.history.replaceState(
+      null,
+      "",
+      `${withBasePath("/docs/")}?doc=${encodeURIComponent(id)}`,
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 

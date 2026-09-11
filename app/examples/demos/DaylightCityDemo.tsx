@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import * as THREE from "three";
 import type { Scene } from "@/lib/sources/core/Scene";
 import { createMapExample } from "@/lib/sources/examples/createMapExample";
+import { withBasePath } from "@/lib/site";
 import type { DemoProps } from "./ExampleShared";
 import styles from "./DaylightCityDemo.module.css";
 
@@ -58,7 +59,8 @@ export default function DaylightCityDemo({ containerRef }: DemoProps) {
       },
       tiles3d: {
         url:
-          process.env.NEXT_PUBLIC_XIAMEN_BUILDINGS_URL ?? "/models/xiamen-buildings/tileset.json",
+          process.env.NEXT_PUBLIC_XIAMEN_BUILDINGS_URL ??
+          withBasePath("/models/xiamen-buildings/tileset.json"),
         maximumScreenSpaceError: 10,
         maxCacheSize: 64,
         maxConcurrent: 8,
@@ -82,7 +84,7 @@ export default function DaylightCityDemo({ containerRef }: DemoProps) {
       },
       geojson: {
         water: {
-          url: "/data/xiamen/water.geojson",
+          url: withBasePath("/data/xiamen/water.geojson"),
           altitude: 0.8,
           waterStyle: {
             deepColor: 0x8b9f90,
