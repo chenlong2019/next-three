@@ -19,10 +19,16 @@
 
 # production
 /build
+/dist/
+/artifacts/
+/docs/
 
 # misc
 .DS_Store
 *.pem
+*.zip
+*.rar
+/plaintext
 
 # debug
 npm-debug.log*
@@ -39,3 +45,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local caches and large unused assets
+/.tmp/
+/public/json/
+/public/models/box.glb

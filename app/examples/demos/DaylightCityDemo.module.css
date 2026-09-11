@@ -1,0 +1,103 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: white;
+  text-shadow: 0 1px 5px rgb(0 0 0 / 65%);
+  letter-spacing: 0;
+}
+
+.location {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.location span {
+  margin-left: 12px;
+  font-weight: 400;
+}
+.caption {
+  position: absolute;
+  bottom: 55px;
+  left: 28px;
+  right: 20px;
+}
+.caption h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+}
+.caption p {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+.credit {
+  position: absolute;
+  bottom: 18px;
+  right: 24px;
+  left: 24px;
+  font-size: 10px;
+  text-align: right;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-top: 1px solid #d9dedb;
+  color: #38433f;
+  font-size: 13px;
+}
+.toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.toolbar select {
+  padding: 5px 8px;
+  border: 1px solid #bac5c0;
+  border-radius: 4px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+.toolbar input {
+  accent-color: #426d5d;
+}
+.status {
+  margin-left: auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: #5f7169;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .location {
+    top: 20px;
+    left: 20px;
+    font-size: 13px;
+  }
+  .caption {
+    left: 20px;
+    bottom: 62px;
+  }
+  .caption h1 {
+    font-size: 24px;
+  }
+  .credit {
+    left: 20px;
+    right: 20px;
+    text-align: left;
+  }
+  .toolbar {
+    gap: 10px 14px;
+    padding: 12px;
+  }
+}

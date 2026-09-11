@@ -1,0 +1,13 @@
+node_modules
+.next
+dist
+out
+build
+coverage
+docs/api
+artifacts
+public
+next-env.d.ts
+package-lock.json
+*.zip
+*.rar

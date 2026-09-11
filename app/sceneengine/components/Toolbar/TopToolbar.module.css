@@ -1,0 +1,55 @@
+.toolbarWrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #323232;
+  border-bottom: 1px solid #222;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  height: 44px;
+  user-select: none;
+}
+.toolGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.divider {
+  width: 1px;
+  height: 26px;
+  background: #4a4a4a;
+  margin: 0 6px;
+}
+.toolBtn {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #e4e4e4;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+.toolBtn:hover:not(:disabled) {
+  background: #484848;
+}
+.toolBtn:active:not(:disabled) {
+  background: #555555;
+}
+.toolBtn:disabled {
+  color: #777;
+  cursor: not-allowed;
+}
+.statusIdle {
+  font-size: 13px;
+  color: #aaa;
+}
+.statusActive {
+  font-size: 13px;
+  color: #58c0ff;
+}
+.statusBox {
+  margin-left: auto;
+  padding: 0 10px;
+}

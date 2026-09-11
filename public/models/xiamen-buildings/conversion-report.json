@@ -1,0 +1,30 @@
+{
+  "source": "building.geojson",
+  "sourceCrs": "EPSG:4326",
+  "centerWgs84": [
+    118.13950949999999,
+    24.499761122676173
+  ],
+  "sourceMercatorBounds": [
+    13141309.480858538,
+    2805975.8620002633,
+    13161150.599355672,
+    2822875.1568861697
+  ],
+  "heightProperty": "height",
+  "baseHeightProperty": null,
+  "defaultBaseHeight": 0.2,
+  "gridSize": 8,
+  "statistics": {
+    "inputFeatures": 4589,
+    "buildingParts": 4590,
+    "skippedFeatures": 0,
+    "repairedFeatures": 0,
+    "tiles": 49,
+    "vertices": 169810,
+    "triangles": 92794,
+    "minHeight": 1.00781665099,
+    "maxHeight": 99.9905459073,
+    "outputBytes": 5417186
+  }
+}
