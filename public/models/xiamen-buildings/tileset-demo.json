@@ -1,7 +1,7 @@
 {
   "asset": {
     "version": "1.1",
-    "generator": "next-cad geojson-to-3dtiles demo subset"
+    "generator": "next-three geojson-to-3dtiles demo subset"
   },
   "geometricError": 0,
   "root": {

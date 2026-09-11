@@ -3,7 +3,7 @@
   "entryPointStrategy": "expand",
   "out": "./docs/api",
   "tsconfig": "./tsconfig.json",
-  "name": "Next CAD API",
+  "name": "next-three API",
   "readme": "none",
   "exclude": ["**/*.d.ts", "**/node_modules/**"],
   "plugin": ["typedoc-plugin-markdown"],

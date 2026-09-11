@@ -398,7 +398,7 @@ export default function ApiDocsExplorer({ docs, initialDocId }: ApiDocsExplorerP
       <header className={styles.topbar}>
         <div className={styles.brandBlock}>
           <Link className={styles.brand} href="/">
-            Next CAD
+            next-three
           </Link>
           <span className={styles.productLabel}>API Reference</span>
         </div>

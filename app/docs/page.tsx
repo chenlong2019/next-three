@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import ApiDocsExplorer, { type ApiDocEntry } from "./ApiDocsExplorer";
 
 export const metadata: Metadata = {
-  title: "API 文档 | Next CAD",
-  description: "Next CAD 三维 GIS 库 API 文档",
+  title: "API 文档 | next-three",
+  description: "next-three 三维 GIS 库 API 文档",
 };
 
 const DOCS_ROOT = path.join(process.cwd(), "docs", "api");

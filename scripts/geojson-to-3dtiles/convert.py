@@ -433,7 +433,7 @@ def write_glb(path: Path, builder: MeshBuilder, building_parts: int) -> int:
         mode=TRIANGLES,
     )
     gltf = GLTF2(
-        asset=Asset(version="2.0", generator="next-cad geojson-to-3dtiles"),
+        asset=Asset(version="2.0", generator="next-three geojson-to-3dtiles"),
         buffers=[Buffer(byteLength=len(blob))],
         bufferViews=buffer_views,
         accessors=accessors,
@@ -536,7 +536,7 @@ def create_tileset(
         raise ValueError("All generated tiles were empty.")
     geometric_error = max(root_bounds.horizontal_diagonal, 1.0)
     tileset = {
-        "asset": {"version": "1.1", "generator": "next-cad geojson-to-3dtiles"},
+        "asset": {"version": "1.1", "generator": "next-three geojson-to-3dtiles"},
         "geometricError": geometric_error,
         "root": {
             "boundingVolume": {"box": bounding_box(root_bounds, force_horizontal_center=True)},
@@ -549,7 +549,7 @@ def create_tileset(
             "centerWgs84": [center_wgs84[0], center_wgs84[1], 0.0],
             "buildingParts": stats.building_parts,
             "tileCount": stats.tile_count,
-            "coordinateMode": "local Web Mercator offsets for next-cad flat map alignment",
+            "coordinateMode": "local Web Mercator offsets for next-three flat map alignment",
         },
     }
     tileset_path = output / "tileset.json"

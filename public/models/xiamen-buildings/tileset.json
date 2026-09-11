@@ -1,7 +1,7 @@
 {
   "asset": {
     "version": "1.1",
-    "generator": "next-cad geojson-to-3dtiles"
+    "generator": "next-three geojson-to-3dtiles"
   },
   "geometricError": 26062.543061990425,
   "root": {
@@ -1571,6 +1571,6 @@
     ],
     "buildingParts": 4590,
     "tileCount": 49,
-    "coordinateMode": "local Web Mercator offsets for next-cad flat map alignment"
+    "coordinateMode": "local Web Mercator offsets for next-three flat map alignment"
   }
 }
