@@ -14,6 +14,15 @@ import { WebMercatorGIS } from "../gis/WebMercatorGIS";
 
 export type MapExampleLayer = "none" | "google" | "terrain" | "tiles3d";
 
+export interface MapExampleRasterLayer {
+  id: string;
+  url: string;
+  enabled?: boolean;
+  /** 相对主视图 zoom 的偏移，适用于注记等需要匹配底图层级的图层。 */
+  zoomOffset?: number;
+  options?: TileLayerOptions;
+}
+
 export interface MapExampleOptions {
   layer?: MapExampleLayer;
   gis?: WebMercatorGIS;
@@ -32,6 +41,8 @@ export interface MapExampleOptions {
   googleOverviewUrl?: string;
   googleOverviewOptions?: TileLayerOptions;
   googleOptions?: TileLayerOptions;
+  /** Additional XYZ raster layers that share the example camera and update loop. */
+  rasterLayers?: readonly MapExampleRasterLayer[];
   terrain?: {
     readonly terrainUrl: string;
     readonly accessToken: string;
@@ -71,6 +82,8 @@ export interface MapExampleOptions {
 export interface MapExampleApi {
   init(): Promise<void>;
   destroy(): void;
+  setRasterLayerEnabled(id: string, enabled: boolean): void;
+  isRasterLayerEnabled(id: string): boolean;
 }
 
 const DEFAULT_CENTER: [number, number] = [118.1371, 24.49];
@@ -101,6 +114,9 @@ export function createMapExample(
   let scene: Scene | null = null;
   let googleLayer: TileLayer | null = null;
   let googleOverviewLayer: TileLayer | null = null;
+  const rasterLayerConfigs = new Map<string, MapExampleRasterLayer>();
+  const rasterLayers = new Map<string, TileLayer>();
+  const rasterLayerEnabled = new Map<string, boolean>();
   let terrainLayer: CesiumTerrainLayer | null = null;
   let tiles3dLayer: Tiles3DLayer | null = null;
   let waterLayer: GeoJSONLayer | null = null;
@@ -111,6 +127,14 @@ export function createMapExample(
   let lastUpdateTime = 0;
   let cameraControlledByUser = false;
   let removeCameraInteractionListener: (() => void) | null = null;
+
+  for (const layer of options.rasterLayers ?? []) {
+    if (rasterLayerConfigs.has(layer.id)) {
+      throw new TypeError(`Duplicate raster layer id "${layer.id}".`);
+    }
+    rasterLayerConfigs.set(layer.id, layer);
+    rasterLayerEnabled.set(layer.id, layer.enabled ?? true);
+  }
 
   const updateLayers = (): void => {
     if (!scene || disposed) return;
@@ -149,6 +173,17 @@ export function createMapExample(
       target,
       cameraDistance,
     );
+    for (const [id, layer] of rasterLayers) {
+      if (!rasterLayerEnabled.get(id)) continue;
+      const config = rasterLayerConfigs.get(id);
+      if (!config) continue;
+      const layerZoom = THREE.MathUtils.clamp(
+        zoom + (config.zoomOffset ?? 0),
+        config.options?.minZoom ?? 1,
+        config.options?.maxZoom ?? 19,
+      );
+      layer.updateTilesInView(lngBounds, latBounds, layerZoom, target, cameraDistance);
+    }
     terrainLayer?.updateTilesInView(
       lngBounds,
       latBounds,
@@ -208,6 +243,22 @@ export function createMapExample(
       },
     );
     scene.add(terrainLayer);
+  };
+
+  const addRasterLayers = (): void => {
+    if (!scene) return;
+    for (const [id, config] of rasterLayerConfigs) {
+      if (rasterLayers.has(id)) continue;
+      const enabled = rasterLayerEnabled.get(id) ?? true;
+      const layer = new TileLayer(config.url, gis, {
+        ...config.options,
+        altitude: config.options?.altitude ?? surfaceAltitude,
+      });
+      layer.visible = enabled;
+      if (!enabled) layer.setEnabled(false);
+      rasterLayers.set(id, layer);
+      scene.add(layer);
+    }
   };
 
   const addTiles3DLayer = (): void => {
@@ -299,6 +350,7 @@ export function createMapExample(
         if (addTiles3DGoogleFallback) addGoogleLayer();
         addTiles3DLayer();
       }
+      addRasterLayers();
       addGeoJSONLayers();
 
       scene.flyTo(initialView[0], initialView[1], initialView[2], surfaceAltitude);
@@ -332,6 +384,7 @@ export function createMapExample(
     removeCameraInteractionListener = null;
     googleLayer?.dispose();
     googleOverviewLayer?.dispose();
+    for (const layer of rasterLayers.values()) layer.dispose();
     terrainLayer?.dispose();
     tiles3dLayer?.dispose();
     waterLayer?.dispose();
@@ -341,6 +394,7 @@ export function createMapExample(
 
     googleLayer = null;
     googleOverviewLayer = null;
+    rasterLayers.clear();
     terrainLayer = null;
     tiles3dLayer = null;
     waterLayer = null;
@@ -349,5 +403,19 @@ export function createMapExample(
     scene = null;
   };
 
-  return { init, destroy };
+  return {
+    init,
+    destroy,
+    setRasterLayerEnabled(id: string, enabled: boolean) {
+      if (!rasterLayerConfigs.has(id)) return;
+      rasterLayerEnabled.set(id, enabled);
+      const layer = rasterLayers.get(id);
+      if (!layer) return;
+      layer.visible = enabled;
+      layer.setEnabled(enabled);
+    },
+    isRasterLayerEnabled(id: string) {
+      return rasterLayerEnabled.get(id) ?? false;
+    },
+  };
 }

@@ -2,27 +2,39 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode, RefObject } from "react";
-import { createMapExample, type MapExampleOptions } from "@/lib/sources/examples/createMapExample";
+import {
+  createMapExample,
+  type MapExampleApi,
+  type MapExampleOptions,
+} from "@/lib/sources/examples/createMapExample";
 
 export interface DemoProps {
   containerRef: RefObject<HTMLDivElement | null>;
 }
 
-export function useMapExample(
+export interface MapExampleRuntime {
+  status: string;
+  api: MapExampleApi | null;
+}
+
+export function useMapExampleRuntime(
   containerRef: DemoProps["containerRef"],
   options: MapExampleOptions,
-): string {
+): MapExampleRuntime {
   const [status, setStatus] = useState("正在初始化场景...");
+  const [api, setApi] = useState<MapExampleApi | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) {
       setStatus("等待场景容器...");
+      setApi(null);
       return;
     }
 
     let active = true;
     const api = createMapExample(container, options);
+    setApi(api);
     setStatus("正在初始化场景...");
 
     void api.init().then(
@@ -42,7 +54,14 @@ export function useMapExample(
     };
   }, [containerRef, options]);
 
-  return status;
+  return { status, api };
+}
+
+export function useMapExample(
+  containerRef: DemoProps["containerRef"],
+  options: MapExampleOptions,
+): string {
+  return useMapExampleRuntime(containerRef, options).status;
 }
 
 export function DemoPanel({

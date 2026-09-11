@@ -31,6 +31,8 @@ export interface RasterTileLayerOptions {
   color?: THREE.ColorRepresentation;
   /** 影像图层透明度，范围 0-1（默认1） */
   opacity?: number;
+  /** 是否启用透明混合；注记 PNG 等含透明通道的图层应设为 true。 */
+  transparent?: boolean;
   /** {s} 子域列表；Google 默认使用 0-3。 */
   subdomains?: readonly string[];
   /** Keep full-resolution tiles within this multiple of camera distance. */
@@ -65,6 +67,7 @@ export abstract class RasterTileLayer extends THREE.Group {
   protected altitude: number;
   protected color: THREE.Color;
   protected opacity: number;
+  protected transparent: boolean;
   protected lodNearRadiusMultiplier: number;
   private enabled = true;
 
@@ -79,6 +82,7 @@ export abstract class RasterTileLayer extends THREE.Group {
     this.altitude = options.altitude ?? 0;
     this.color = new THREE.Color(options.color ?? 0xffffff);
     this.opacity = options.opacity ?? 1;
+    this.transparent = options.transparent ?? this.opacity < 1;
     this.lodNearRadiusMultiplier = options.lodNearRadiusMultiplier ?? 1;
     if (!Number.isFinite(this.altitude)) {
       throw new TypeError("Raster tile altitude must be a finite number.");
@@ -268,7 +272,7 @@ export abstract class RasterTileLayer extends THREE.Group {
       color: this.color,
       opacity: this.opacity,
       side: THREE.DoubleSide,
-      transparent: this.opacity < 1,
+      transparent: this.transparent,
       polygonOffset: true,
       // Parent fallback tiles can overlap their higher-resolution children
       // for one or more frames. Push detail tiles toward the camera so the

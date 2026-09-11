@@ -80,6 +80,9 @@ NEXT_PUBLIC_TILES3D_URL=http://localhost:8084/tileset.json
 
 # 厦门建筑 3D Tiles，默认使用 public/models/xiamen-buildings/tileset.json
 NEXT_PUBLIC_XIAMEN_BUILDINGS_URL=/models/xiamen-buildings/tileset.json
+
+# 天地图浏览器端 Key；不配置时使用演示默认 tk
+NEXT_PUBLIC_TIANDITU_TOKEN=your_tianditu_browser_token
 ```
 
 `NEXT_PUBLIC_*` 变量会进入浏览器端产物，不应写入具有高权限或长期有效的服务端密钥。Cesium Ion Token 应限制为所需的 Asset ID 和权限范围。
@@ -91,7 +94,7 @@ NEXT_PUBLIC_XIAMEN_BUILDINGS_URL=/models/xiamen-buildings/tileset.json
 | 路由                          | 内容                                 |
 | ----------------------------- | ------------------------------------ |
 | `/examples/scene-init/`       | 场景、相机、控制器和 WebGL 初始化    |
-| `/examples/google-tiles/`     | Google XYZ 影像瓦片与 LOD            |
+| `/examples/google-tiles/`     | 天地图 / Google XYZ 瓦片、注记与 LOD |
 | `/examples/cesium-terrain/`   | Cesium quantized-mesh 地形与影像贴合 |
 | `/examples/photogrammetry/`   | OGC 3D Tiles 倾斜摄影                |
 | `/examples/xiamen-buildings/` | 厦门建筑 3D Tiles                    |
