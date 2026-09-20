@@ -35,12 +35,26 @@ export interface RasterTileLayerOptions {
   transparent?: boolean;
   /** {s} 子域列表；Google 默认使用 0-3。 */
   subdomains?: readonly string[];
+  /** 跨子域共享的请求调度组。 */
+  requestGroup?: string;
+  /** 调度组的最大并发。 */
+  maximumRequestsPerServer?: number;
+  /** 失败瓦片再次请求前的冷却时间（毫秒）。 */
+  failureCooldownMs?: number;
   /** Keep full-resolution tiles within this multiple of camera distance. */
   lodNearRadiusMultiplier?: number;
 }
 
 /** 传给基类的队列构造参数（由子类决定 urlTemplate 或 buildUrl） */
-type QueueConfig = Pick<TileRequestQueueOptions, "urlTemplate" | "buildUrl" | "subdomains">;
+type QueueConfig = Pick<
+  TileRequestQueueOptions,
+  | "urlTemplate"
+  | "buildUrl"
+  | "subdomains"
+  | "requestGroup"
+  | "maximumRequestsPerServer"
+  | "failureCooldownMs"
+>;
 
 /**
  * 栅格瓦片图层抽象基类
@@ -281,12 +295,70 @@ export abstract class RasterTileLayer extends THREE.Group {
       polygonOffsetUnits: -2,
     });
 
+    const childVisibility = new THREE.Vector4(0, 0, 0, 0);
+    mat.userData.childVisibility = childVisibility;
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.childVisibility = { value: childVisibility };
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec2 vRasterUv;")
+        .replace("#include <uv_vertex>", "#include <uv_vertex>\nvRasterUv = uv;");
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          [
+            "#include <common>",
+            "varying vec2 vRasterUv;",
+            "uniform vec4 childVisibility;",
+          ].join("\n"),
+        )
+        .replace(
+          "#include <map_fragment>",
+          [
+            "vec2 childUv = floor(clamp(vRasterUv, vec2(0.0), vec2(0.999999)) * 2.0);",
+            "bool childHidden =",
+            "  (childUv.x < 0.5 && childUv.y < 0.5 && childVisibility.x > 0.5) ||",
+            "  (childUv.x > 0.5 && childUv.y < 0.5 && childVisibility.y > 0.5) ||",
+            "  (childUv.x < 0.5 && childUv.y > 0.5 && childVisibility.z > 0.5) ||",
+            "  (childUv.x > 0.5 && childUv.y > 0.5 && childVisibility.w > 0.5);",
+            "if (childHidden) discard;",
+            "#include <map_fragment>",
+          ].join("\n"),
+        );
+    };
+
     const mesh = new THREE.Mesh(geo, mat);
     // Render coarse fallback tiles first and detailed tiles last. The depth
     // offset above handles the remaining coplanar overlap.
     mesh.renderOrder = zoom;
     this.add(mesh);
     this.loadedTiles.set(key, mesh);
+    this.updateAncestorOcclusion();
+  }
+
+  /** Hide only the parent quadrants covered by already-renderable children. */
+  protected updateAncestorOcclusion(): void {
+    for (const [key, parent] of this.loadedTiles) {
+      const material = parent.material as THREE.MeshBasicMaterial;
+      const childVisibility = material.userData.childVisibility as THREE.Vector4 | undefined;
+      if (!childVisibility) continue;
+
+      const [x, y, zoom] = key.split(",").map(Number);
+      const southY = y * 2 + 1;
+      const northY = y * 2;
+      const isChildRenderable = (childX: number, childY: number): boolean => {
+        const child = this.loadedTiles.get(this.getKey(childX, childY, zoom + 1));
+        if (!child || !child.visible) return false;
+        const childMaterial = child.material as THREE.MeshBasicMaterial;
+        return childMaterial.opacity > 0.001;
+      };
+
+      childVisibility.set(
+        isChildRenderable(x * 2, southY) ? 1 : 0,
+        isChildRenderable(x * 2 + 1, southY) ? 1 : 0,
+        isChildRenderable(x * 2, northY) ? 1 : 0,
+        isChildRenderable(x * 2 + 1, northY) ? 1 : 0,
+      );
+    }
   }
 
   // ─── LOD 计算 ───────────────────────────────────────────────
@@ -308,6 +380,164 @@ export abstract class RasterTileLayer extends THREE.Group {
     const zoomOffset = Math.floor(Math.log2(ratio));
     const clampedOffset = Math.min(zoomOffset, this.maxLodLevels);
     return Math.max(this.minZoom, baseZoom - clampedOffset);
+  }
+
+  /** Distance from the camera target to the closest point in a tile. */
+  protected tileDistanceToBounds(
+    x: number,
+    y: number,
+    zoom: number,
+    target: THREE.Vector3,
+  ): number {
+    const bounds = getTileBounds(x, y, zoom);
+    const sw = this.gis.lngLatToThree(bounds.west, bounds.south, this.altitude);
+    const ne = this.gis.lngLatToThree(bounds.east, bounds.north, this.altitude);
+    const nearest = new THREE.Vector3(
+      THREE.MathUtils.clamp(target.x, Math.min(sw.x, ne.x), Math.max(sw.x, ne.x)),
+      THREE.MathUtils.clamp(target.y, Math.min(sw.y, ne.y), Math.max(sw.y, ne.y)),
+      this.altitude,
+    );
+    return nearest.distanceTo(target);
+  }
+
+  protected getViewFrustum(camera?: THREE.Camera): THREE.Frustum | null {
+    if (!camera) return null;
+    camera.updateMatrixWorld();
+    return new THREE.Frustum().setFromProjectionMatrix(
+      new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+    );
+  }
+
+  protected isTileInView(
+    x: number,
+    y: number,
+    zoom: number,
+    viewLngBounds: [number, number],
+    viewLatBounds: [number, number],
+    frustum: THREE.Frustum | null,
+  ): boolean {
+    const bounds = getTileBounds(x, y, zoom);
+    if (
+      bounds.east < viewLngBounds[0] ||
+      bounds.west > viewLngBounds[1] ||
+      bounds.north < viewLatBounds[0] ||
+      bounds.south > viewLatBounds[1]
+    ) {
+      return false;
+    }
+    if (!frustum) return true;
+
+    const sw = this.gis.lngLatToThree(bounds.west, bounds.south, this.altitude);
+    const se = this.gis.lngLatToThree(bounds.east, bounds.south, this.altitude);
+    const ne = this.gis.lngLatToThree(bounds.east, bounds.north, this.altitude);
+    const nw = this.gis.lngLatToThree(bounds.west, bounds.north, this.altitude);
+    return frustum.intersectsBox(new THREE.Box3().setFromPoints([sw, se, ne, nw]));
+  }
+
+  /**
+   * Select a mixed-resolution quadtree. A large ground bounding box is common
+   * at low camera pitch, so reducing the whole box to one fallback zoom makes
+   * the foreground blurry. Refining leaves by distance keeps detail near the
+   * target while retaining a bounded number of requests toward the horizon.
+   */
+  protected collectAdaptiveTileSelection(
+    viewLngBounds: [number, number],
+    viewLatBounds: [number, number],
+    baseZoom: number,
+    target: THREE.Vector3,
+    nearRadius: number,
+    camera?: THREE.Camera,
+  ): { x: number; y: number; zoom: number; priority: number }[] {
+    const rootZoom = this.minZoom;
+    const frustum = this.getViewFrustum(camera);
+    const sw = lngLatToTile(viewLngBounds[0], viewLatBounds[0], rootZoom);
+    const ne = lngLatToTile(viewLngBounds[1], viewLatBounds[1], rootZoom);
+    const leaves = new Map<
+      TileKey,
+      { x: number; y: number; zoom: number; distance: number; targetZoom: number }
+    >();
+
+    const addLeaf = (x: number, y: number, zoom: number): void => {
+      if (!this.isTileInView(x, y, zoom, viewLngBounds, viewLatBounds, frustum)) return;
+      const distance = this.tileDistanceToBounds(x, y, zoom, target);
+      leaves.set(this.getKey(x, y, zoom), {
+        x,
+        y,
+        zoom,
+        distance,
+        targetZoom: this.getEffectiveZoom(distance, baseZoom, nearRadius),
+      });
+    };
+
+    for (let x = Math.min(sw.x, ne.x); x <= Math.max(sw.x, ne.x); x++) {
+      for (let y = Math.min(sw.y, ne.y); y <= Math.max(sw.y, ne.y); y++) {
+        addLeaf(x, y, rootZoom);
+      }
+    }
+
+    const getChildren = (tile: {
+      x: number;
+      y: number;
+      zoom: number;
+    }): number[][] => {
+      const childZoom = tile.zoom + 1;
+      return [
+        [tile.x * 2, tile.y * 2],
+        [tile.x * 2 + 1, tile.y * 2],
+        [tile.x * 2, tile.y * 2 + 1],
+        [tile.x * 2 + 1, tile.y * 2 + 1],
+      ].filter(([x, y]) =>
+        this.isTileInView(x, y, childZoom, viewLngBounds, viewLatBounds, frustum),
+      );
+    };
+
+    const expand = (tile: {
+      x: number;
+      y: number;
+      zoom: number;
+    }): boolean => {
+      const children = getChildren(tile);
+      if (children.length === 0 || leaves.size - 1 + children.length > this.maxTilesPerView) {
+        return false;
+      }
+      leaves.delete(this.getKey(tile.x, tile.y, tile.zoom));
+      for (const [x, y] of children) addLeaf(x, y, tile.zoom + 1);
+      return true;
+    };
+
+    // Keep a continuous high-detail path at the camera target before spending
+    // the remaining tile budget on the wider horizon.
+    while (true) {
+      const focus = [...leaves.values()]
+        .filter((tile) => tile.distance <= 1e-6 && tile.zoom < baseZoom)
+        .sort((a, b) => a.zoom - b.zoom)[0];
+      if (!focus || !expand(focus)) break;
+    }
+
+    while (true) {
+      const candidates = [...leaves.values()]
+        .filter((tile) => tile.zoom < baseZoom && tile.zoom < tile.targetZoom)
+        .sort((a, b) => {
+          const detailNeed = b.targetZoom - b.zoom - (a.targetZoom - a.zoom);
+          return detailNeed || a.distance - b.distance;
+        });
+
+      let expanded = false;
+      for (const tile of candidates) {
+        if (expand(tile)) {
+          expanded = true;
+          break;
+        }
+      }
+      if (!expanded) break;
+    }
+
+    return [...leaves.values()].map(({ x, y, zoom, distance }) => ({
+      x,
+      y,
+      zoom,
+      priority: distance,
+    }));
   }
 
   /**
@@ -336,6 +566,7 @@ export abstract class RasterTileLayer extends THREE.Group {
     baseZoom: number,
     cameraTarget?: THREE.Vector3,
     cameraDistance?: number,
+    camera?: THREE.Camera,
   ) {
     if (!this.enabled) return;
     baseZoom = Math.max(this.minZoom, Math.min(this.maxZoom, Math.floor(baseZoom)));
@@ -344,62 +575,23 @@ export abstract class RasterTileLayer extends THREE.Group {
     const target = cameraTarget ?? new THREE.Vector3(0, 0, 0);
     const nearRadius = (cameraDistance ?? 50000) * this.lodNearRadiusMultiplier;
 
-    const swTile = lngLatToTile(lngMin, latMin, baseZoom);
-    const neTile = lngLatToTile(lngMax, latMax, baseZoom);
-
-    const xStart = Math.min(swTile.x, neTile.x);
-    const xEnd = Math.max(swTile.x, neTile.x);
-    const yStart = Math.min(swTile.y, neTile.y);
-    const yEnd = Math.max(swTile.y, neTile.y);
-
-    const totalTiles = (xEnd - xStart + 1) * (yEnd - yStart + 1);
-
     const visibleKeys = new Set<TileKey>();
     const tilesToLoad: { key: TileKey; x: number; y: number; zoom: number; priority: number }[] =
       [];
 
-    if (totalTiles <= this.maxTilesPerView) {
-      for (let x = xStart; x <= xEnd; x++) {
-        for (let y = yStart; y <= yEnd; y++) {
-          const dist = this.tileDistanceTo(x, y, baseZoom, target);
-          const effectiveZoom = this.getEffectiveZoom(dist, baseZoom, nearRadius);
-          const parent = this.toParentTile(x, y, baseZoom, effectiveZoom);
-          const key = this.getKey(parent.x, parent.y, effectiveZoom);
-
-          if (visibleKeys.has(key)) continue;
-          visibleKeys.add(key);
-          if (this.loadedTiles.has(key)) continue;
-          if (this.restoreFromCache(key)) continue;
-          tilesToLoad.push({ key, x: parent.x, y: parent.y, zoom: effectiveZoom, priority: dist });
-        }
-      }
-    } else {
-      let fallbackZoom = Math.max(this.minZoom, baseZoom - this.maxLodLevels);
-      while (fallbackZoom > this.minZoom) {
-        const factor = Math.pow(2, baseZoom - fallbackZoom);
-        const estimatedTiles =
-          Math.ceil((xEnd - xStart + 1) / factor) * Math.ceil((yEnd - yStart + 1) / factor);
-        if (estimatedTiles <= this.maxTilesPerView) break;
-        fallbackZoom--;
-      }
-      const swF = lngLatToTile(lngMin, latMin, fallbackZoom);
-      const neF = lngLatToTile(lngMax, latMax, fallbackZoom);
-      const fxStart = Math.min(swF.x, neF.x);
-      const fxEnd = Math.max(swF.x, neF.x);
-      const fyStart = Math.min(swF.y, neF.y);
-      const fyEnd = Math.max(swF.y, neF.y);
-
-      for (let x = fxStart; x <= fxEnd; x++) {
-        for (let y = fyStart; y <= fyEnd; y++) {
-          const key = this.getKey(x, y, fallbackZoom);
-          if (visibleKeys.has(key)) continue;
-          visibleKeys.add(key);
-          if (this.loadedTiles.has(key)) continue;
-          if (this.restoreFromCache(key)) continue;
-          const dist = this.tileDistanceTo(x, y, fallbackZoom, target);
-          tilesToLoad.push({ key, x, y, zoom: fallbackZoom, priority: dist });
-        }
-      }
+    for (const tile of this.collectAdaptiveTileSelection(
+      [lngMin, lngMax],
+      [latMin, latMax],
+      baseZoom,
+      target,
+      nearRadius,
+      camera,
+    )) {
+      const key = this.getKey(tile.x, tile.y, tile.zoom);
+      visibleKeys.add(key);
+      if (this.loadedTiles.has(key)) continue;
+      if (this.restoreFromCache(key)) continue;
+      tilesToLoad.push({ key, ...tile });
     }
 
     for (const tile of tilesToLoad) {
@@ -418,6 +610,7 @@ export abstract class RasterTileLayer extends THREE.Group {
     }
 
     this.queue.processQueue();
+    this.updateAncestorOcclusion();
   }
 
   public setEnabled(enabled: boolean): void {

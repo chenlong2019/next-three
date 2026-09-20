@@ -13,6 +13,28 @@ GitHub Pages 会同时部署示例页面和 API 文档：
 
 推送到 `master` 分支后，`.github/workflows/deploy-pages.yml` 会自动构建并发布 `dist/`。
 
+## 作为通用库使用（three-gis）
+
+`lib/` 可以独立打包成框架无关的 npm 包 **three-gis**，供原生 HTML、Vue、React 等任意前端场景安装使用：
+
+```bash
+npm run build:lib      # 产出 lib/dist/：ESM + CJS + 全局脚本 + 类型声明
+npm run verify:lib     # 产物验证：CJS/ESM/类型通道 + 真实浏览器渲染
+```
+
+```ts
+import { Scene, WebMercatorGIS, TileLayer } from "three-gis";
+
+const gis = new WebMercatorGIS(118.1371, 24.49);
+const scene = new Scene(container, { gis });
+await scene.ready();
+scene.add(new TileLayer("https://example.com/{z}/{x}/{y}.png", gis));
+scene.flyTo(118.1371, 24.49, 120000);
+```
+
+安装方式、各框架接入示例与产物说明见 [`lib/README.md`](./lib/README.md)。
+库构建配置在 `lib/rollup.config.mjs` 与 `lib/tsconfig.build.json`，原生 HTML 可直接打开的示例在 `lib/examples/`。
+
 ## 主要能力
 
 - Web Mercator 与 WGS84 坐标互转，使用局部原点降低 Three.js 浮点精度问题。
@@ -198,9 +220,10 @@ const terrain = new CesiumTerrainLayer(
     minZoom: 1,
     maxZoom: 15,
     terrainZoomOffset: 0,
-    imageryZoomOffset: 2,
-    imageryMaxCanvasSize: 4096,
-    imageryUrlTemplate: "https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    imageryZoomOffset: -1,
+    imageryMaxCanvasSize: 512,
+    imageryUrlTemplate:
+      "https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=YOUR_TK",
   },
 );
 
@@ -334,9 +357,20 @@ NEXT_PUBLIC_BASE_PATH=/next-three
 
 `maxZoom` 只是应用上限。Terrain 服务没有在目标区域提供更高层级时，图层会回退到最近可用祖先瓦片。
 
-### Google 影像没有请求到最高层级
+### 地形影像请求层级和请求数量
 
-地形影像层级与地形瓦片覆盖范围相关。父级 fallback 会使用较小的影像画布和较低层级来快速显示，真正可见的目标瓦片使用更大的画布继续细化。不要用 fallback 请求判断当前 Google 的最高层级。
+影像层级由相机高度和屏幕分辨率确定，不以地形层级为基准。`imageryZoomOffset` 控制相对相机推荐层级的偏移；负值会减少请求数量并让单张影像覆盖更大的屏幕范围。`imageryMaxCanvasSize` 限制每个地形瓦片的影像拼接预算。
+
+### 瓦片「一块块冒出来」的节奏
+
+影像瓦片就绪后不会立即上屏，而是按「入场节拍」依次淡入，避免同一帧集中亮起（观感上像放鞭炮）。默认一整批约在 420ms 内出清，块多时间隔自动变密、块少时变疏。初始化可调：
+
+- `revealSpreadMs`：整批希望全部亮起的时长；调小=清晰更快但更急，`0` = 关闭节拍（就绪即上屏）
+- `revealMaxSlotMs`：单块入场间隔上限，避免只有几块时慢慢挤
+- `revealMaxWaitMs`：候场超过该时长强制优先入场，保证节拍不拖慢清晰度
+- `revealMaxPerFrame`：同一帧最多放行的块数，低帧率时补偿节拍
+
+相机手势（拖拽/缩放）期间每次视图更新放行的影像升级块数由 `imageryInteractingBudget` 控制，默认 `2`；设为 `0` 回到「手势内完全冻结」（拖动期间偏糊、松手后集中补课）。
 
 ### 静态部署刷新子路由返回 404
 

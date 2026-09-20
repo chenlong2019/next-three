@@ -48,5 +48,16 @@ next-env.d.ts
 
 # local caches and large unused assets
 /.tmp/
+/lib/.rollup-tmp/
 /public/json/
 /public/models/box.glb
+
+# 库构建产物（由 npm run build:lib 生成，不纳入版本管理）
+/lib/dist/
+
+# 诊断脚本的落盘日志（调试中间产物）
+/.*.log
+/scripts/.*
+
+# 智能体工作区状态与记忆
+/.workbuddy/

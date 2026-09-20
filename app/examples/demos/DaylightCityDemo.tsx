@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import * as THREE from "three";
 import type { Scene } from "@/lib/sources/core/Scene";
 import { createMapExample } from "@/lib/sources/examples/createMapExample";
+import { createTiandituImageryLayers } from "@/lib/sources/examples/tianditu";
 import { withBasePath } from "@/lib/site";
 import type { DemoProps } from "./ExampleShared";
 import styles from "./DaylightCityDemo.module.css";
@@ -51,8 +52,8 @@ export default function DaylightCityDemo({ containerRef }: DemoProps) {
       layer: "tiles3d",
       origin: ORIGIN,
       initialView: [118.1505, 24.5, 2200],
-      googleUrl: "https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-      googleOptions: { color: 0xbfc7c3, maxCacheSize: 240 },
+      googleFallback: false,
+      rasterLayers: createTiandituImageryLayers(),
       three: {
         backgroundColor: 0xbec9c7,
         gisControllerOptions: { maxPolarAngle: THREE.MathUtils.degToRad(78) },
@@ -183,7 +184,7 @@ export default function DaylightCityDemo({ containerRef }: DemoProps) {
               <h1>厦门 · 城市肌理</h1>
               <p>{VIEWS[view].label} / URBAN LANDSCAPE</p>
             </div>
-            <div className={styles.credit}>建筑：本地 GeoJSON · 影像 © Google</div>
+            <div className={styles.credit}>建筑：本地 GeoJSON · 影像 © 天地图</div>
           </div>,
           portalTarget,
         )}

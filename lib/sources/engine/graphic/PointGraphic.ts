@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { v4 as uuidv4 } from "uuid";
 import { BaseGraphic } from "./BaseGraphic";
 
 export interface PointStyle {
@@ -40,8 +41,4 @@ export class PointGraphic extends BaseGraphic {
       style: { ...this.style },
     });
   }
-}
-
-function uuidv4(): string | undefined {
-  throw new Error("Function not implemented.");
 }

@@ -2,6 +2,7 @@
 
 import * as THREE from "three";
 import type { MapExampleOptions } from "@/lib/sources/examples/createMapExample";
+import { createTiandituImageryLayers } from "@/lib/sources/examples/tianditu";
 import { withBasePath } from "@/lib/site";
 import { DemoPanel, type DemoProps, useMapExample } from "./ExampleShared";
 
@@ -18,7 +19,8 @@ const OPTIONS = {
   layer: "tiles3d",
   origin: DATA_CENTER,
   initialView: [DATA_CENTER[0], DATA_CENTER[1], 22000],
-  googleFallback: true,
+  googleFallback: false,
+  rasterLayers: createTiandituImageryLayers(),
   three: {
     backgroundColor: 0x020711,
     toneMappingExposure: 0.8,
@@ -32,10 +34,6 @@ const OPTIONS = {
     gisControllerOptions: {
       maxPolarAngle: THREE.MathUtils.degToRad(82),
     },
-  },
-  googleOptions: {
-    color: 0x38565f,
-    opacity: 1,
   },
   geojson: {
     water: {

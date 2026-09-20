@@ -43,6 +43,12 @@ export interface TileRequestQueueOptions {
   buildUrl?: (req: TileRequest) => string;
   /** {s} 子域列表；默认使用 Google 的 0-3。 */
   subdomains?: readonly string[];
+  /** 跨子域共享的调度组，例如天地图的 t0-t7 共用一个限流额度。 */
+  requestGroup?: string;
+  /** 指定调度组的最大并发；用于限制浏览器端 tk 的请求速率。 */
+  maximumRequestsPerServer?: number;
+  /** 失败瓦片再次入队前的冷却时间（毫秒）。 */
+  failureCooldownMs?: number;
   /** 瓦片加载成功回调 */
   onLoad: (req: TileRequest, texture: THREE.Texture) => void;
   /** 瓦片加载失败回调 */
@@ -65,6 +71,10 @@ export class TileRequestQueue {
   private urlTemplate?: string;
   private buildUrl?: (req: TileRequest) => string;
   private subdomains: readonly string[];
+  private requestGroup?: string;
+  private maximumRequestsPerServer?: number;
+  private failureCooldownMs: number;
+  private failedAt = new Map<string, number>();
   private maxConcurrent: number;
   private maxQueueSize: number;
   private maxRequestsPerFrame: number;
@@ -76,6 +86,9 @@ export class TileRequestQueue {
     this.urlTemplate = options.urlTemplate;
     this.buildUrl = options.buildUrl;
     this.subdomains = options.subdomains?.length ? options.subdomains : DEFAULT_TILE_SUBDOMAINS;
+    this.requestGroup = options.requestGroup;
+    this.maximumRequestsPerServer = options.maximumRequestsPerServer;
+    this.failureCooldownMs = options.failureCooldownMs ?? 0;
     this.maxConcurrent = options.maxConcurrent ?? 50;
     this.maxQueueSize = options.maxQueueSize ?? 256;
     this.maxRequestsPerFrame = options.maxRequestsPerFrame ?? 4;
@@ -114,6 +127,8 @@ export class TileRequestQueue {
    */
   enqueue(key: string, x: number, y: number, zoom: number, priority: number) {
     if (this.disposed) return;
+    const failedAt = this.failedAt.get(key);
+    if (failedAt !== undefined && performance.now() - failedAt < this.failureCooldownMs) return;
     // 已在加载中，不重复入队
     if (this.loading.has(key)) return;
 
@@ -227,6 +242,7 @@ export class TileRequestQueue {
         this.loading.delete(req.key);
         req.state = TileLoadState.LOADED;
         req.abortController = null;
+        this.failedAt.delete(req.key);
         this.onLoad(req, texture);
       })
       .catch((err: Error) => {
@@ -234,6 +250,7 @@ export class TileRequestQueue {
         this.loading.delete(req.key);
         req.state = TileLoadState.FAILED;
         req.abortController = null;
+        if (this.failureCooldownMs > 0) this.failedAt.set(req.key, performance.now());
         this.onError(req, err);
       });
   }
@@ -247,6 +264,8 @@ export class TileRequestQueue {
       url,
       priority,
       signal,
+      requestGroup: this.requestGroup,
+      maximumRequestsPerServer: this.maximumRequestsPerServer,
       load: () =>
         new Promise<THREE.Texture>((resolve, reject) => {
           if (signal.aborted) {
@@ -295,5 +314,6 @@ export class TileRequestQueue {
       req.abortController?.abort();
     }
     this.loading.clear();
+    this.failedAt.clear();
   }
 }

@@ -3,7 +3,8 @@ import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import type { Scene } from "../core/Scene";
-import { createMapExample, DEFAULT_GOOGLE_URL, type MapExampleApi } from "./createMapExample";
+import { createMapExample, type MapExampleApi } from "./createMapExample";
+import { createTiandituImageryLayers } from "./tianditu";
 import { PolylinePrimitive } from "../engine/primitives/PolylinePrimitive";
 import { PolygonPrimitive } from "../engine/primitives/PolygonPrimitive";
 import { SpherePrimitive } from "../engine/primitives/SpherePrimitive";
@@ -157,9 +158,11 @@ export function createDrawDemo(container: HTMLDivElement, options: DrawDemoOptio
 
   async function init() {
     mapApi = createMapExample(container, {
-      // Drawing always starts on a Google XYZ basemap.
-      layer: "google",
-      googleUrl: options.googleUrl ?? DEFAULT_GOOGLE_URL,
+      // Drawing starts on the Tianditu imagery and annotation layers by default.
+      layer: "none",
+      rasterLayers: options.googleUrl
+        ? [{ id: "custom-raster", url: options.googleUrl, enabled: true }]
+        : createTiandituImageryLayers(),
       origin: options.origin ?? [118.1371, 24.49],
       initialView: options.initialView ?? [118.1371, 24.49, 8000],
       surfaceAltitude,

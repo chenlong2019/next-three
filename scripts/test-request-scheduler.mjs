@@ -18,7 +18,9 @@ function loadTypeScript(relativePath) {
 }
 
 const { RequestScheduler } = loadTypeScript("../lib/sources/engine/layers/RequestScheduler.ts");
-const { replaceTileTemplate } = loadTypeScript("../lib/sources/engine/layers/TileUrlTemplate.ts");
+const { getTileRequestGroup, replaceTileTemplate } = loadTypeScript(
+  "../lib/sources/engine/layers/TileUrlTemplate.ts",
+);
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 async function testPerServerLimit() {
@@ -88,6 +90,43 @@ async function testDifferentOriginsRunIndependently() {
   assert.equal(scheduler.activeRequestCount, 12);
 
   for (const resolve of resolvers) resolve();
+  await Promise.all(requests);
+}
+
+async function testSharedRequestGroup() {
+  const scheduler = new RequestScheduler({
+    maximumRequests: 50,
+    maximumRequestsPerServer: 6,
+  });
+  const resolvers = [];
+  let started = 0;
+  const requests = Array.from({ length: 8 }, (_, index) =>
+    scheduler.schedule({
+      url: `https://t${index}.tianditu.example.test/${index}.png`,
+      priority: index,
+      requestGroup: "tianditu",
+      maximumRequestsPerServer: 2,
+      load: () =>
+        new Promise((resolve) => {
+          started++;
+          resolvers.push(resolve);
+        }),
+    }),
+  );
+
+  await tick();
+  assert.equal(started, 2, "shared request groups must use one concurrency limit");
+  assert.equal(scheduler.getActiveRequestCountFor("https://t0.tianditu.example.test"), 0);
+  assert.equal(scheduler.pendingRequestCount, 6);
+
+  for (const expected of [4, 6, 8]) {
+    for (const resolve of resolvers.splice(0)) resolve();
+    await tick();
+    await tick();
+    assert.equal(started, expected, "shared group slots should release together");
+  }
+
+  for (const resolve of resolvers.splice(0)) resolve();
   await Promise.all(requests);
 }
 
@@ -167,10 +206,16 @@ function testTileTemplateSubdomains() {
     "mt2.google.com",
     "mt3.google.com",
   ]);
+  assert.equal(
+    getTileRequestGroup("https://t{s}.tianditu.example/{z}/{x}/{y}.png"),
+    "tile-template:https://t0.tianditu.example",
+  );
+  assert.equal(getTileRequestGroup("https://tiles.example/{z}/{x}/{y}.png"), undefined);
 }
 
 await testPerServerLimit();
 await testDifferentOriginsRunIndependently();
+await testSharedRequestGroup();
 await testPriorityAndAbort();
 testTileTemplateSubdomains();
 

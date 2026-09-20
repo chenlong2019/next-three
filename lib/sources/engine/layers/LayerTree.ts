@@ -1,4 +1,4 @@
-import { LayerTreeNode, LayerTreeViewNode } from "@/lib/sources/types/layers";
+import { LayerTreeNode, LayerTreeViewNode } from "../../types/layers";
 import { LayerGroup } from "./LayerGroup";
 import { VectorLayer } from "./VectorLayer";
 

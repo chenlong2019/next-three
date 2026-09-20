@@ -7,6 +7,7 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { HELPER_LAYER } from "./globleValue";
 import { GISOrbitController, GISOrbitControllerOptions } from "./controller/GISOrbitController";
 import { WebMercatorGIS } from "../gis/WebMercatorGIS";
+import { getHorizonDistance } from "./utils/camera-utils";
 
 export interface BloomEffectOptions {
   /** Bloom intensity. Default: 1. */
@@ -34,6 +35,8 @@ export interface ThreeUtilsOptions {
   /** Initial and maximum camera clipping range in meters. */
   cameraNear?: number;
   cameraFar?: number;
+  /** Vertical camera field of view in degrees. Default: 75. */
+  cameraFov?: number;
   /** Recalculate clipping planes from camera distance each frame. */
   dynamicCameraClipping?: boolean;
   postprocessing?: ThreePostprocessingOptions;
@@ -75,6 +78,7 @@ export function ThreeUtils(container: HTMLElement, options: ThreeUtilsOptions = 
     toneMappingExposure: options.toneMappingExposure ?? 1,
     cameraNear: options.cameraNear ?? 0.1,
     cameraFar: options.cameraFar ?? 100000000,
+    cameraFov: options.cameraFov ?? 75,
     dynamicCameraClipping: options.dynamicCameraClipping ?? true,
     postprocessing: options.postprocessing ?? {},
     gis: options.gis ?? new WebMercatorGIS(0, 0),
@@ -217,7 +221,10 @@ export function ThreeUtils(container: HTMLElement, options: ThreeUtilsOptions = 
       config.cameraNear,
       Math.max(config.cameraNear, Math.min(distance * 0.2, 50)),
     );
-    const far = Math.min(config.cameraFar, Math.max(1000, distance * 12));
+    const eyeHeight = camera.position.z - target.z;
+    const horizonDistance = getHorizonDistance(eyeHeight, { horizonFactor: 1 });
+    const horizonViewDistance = Math.hypot(Math.max(eyeHeight, 0), horizonDistance) * 1.05;
+    const far = Math.min(config.cameraFar, Math.max(1000, distance * 12, horizonViewDistance));
     const nextFar = Math.max(far, near * 2.01);
     if (Math.abs(camera.near - near) < 0.001 && Math.abs(camera.far - nextFar) < 1) return;
     camera.near = near;
@@ -278,7 +285,12 @@ export function ThreeUtils(container: HTMLElement, options: ThreeUtilsOptions = 
 
       const width = Math.max(container.clientWidth, 1);
       const height = Math.max(container.clientHeight, 1);
-      camera = new THREE.PerspectiveCamera(75, width / height, config.cameraNear, config.cameraFar);
+      camera = new THREE.PerspectiveCamera(
+        config.cameraFov,
+        width / height,
+        config.cameraNear,
+        config.cameraFar,
+      );
       camera.up.copy(zUp);
       camera.position.copy(config.cameraPosition);
 

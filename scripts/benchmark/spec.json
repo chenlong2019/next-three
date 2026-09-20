@@ -1,0 +1,128 @@
+{
+  "$comment": "地形瓦片渲染基准测试规格。指标全部从图层内部可计算，避免主观判断。expect 中每个指标对场景所有采样点取聚合值后与阈值比较：max=不得超过，min=不得低于。注意：瞬时糊斑（blurRatioPeak）不设阈值——'先粗后细'策略下交互刚结束的短暂糊斑是正常代价，验收标准是模糊必须在 settleSeconds 内清零（blurRatioFinal）。",
+  "url": "http://localhost:12345/examples/cesium-terrain/fullscreen/",
+  "viewport": { "width": 1280, "height": 860 },
+  "defaults": {
+    "sharpPixelRatio": 1.5,
+    "settleMaxSeconds": 45,
+    "settleQuietSamples": 3,
+    "sampleIntervalMs": 1000,
+    "grid": { "cols": 32, "rows": 20 },
+    "readyTimeoutSeconds": 120
+  },
+  "metrics": {
+    "blurRatioPeak": { "unit": "比例", "desc": "屏幕网格中由\"影像分辨率不足/无覆盖\"瓦片顶着的点的占比峰值。交互刚结束时的瞬时糊斑是\"先粗后细\"策略的正常代价，故只做观测、不设阈值。", "better": "lower" },
+    "blurRatioFinal": { "unit": "比例", "desc": "收敛后的糊斑占比（真正的验收标准：最终画面必须清晰）", "better": "lower" },
+    "uncoveredRatioFinal": { "unit": "比例", "desc": "收敛后完全没有已就绪瓦片覆盖的屏幕点占比（永久空洞 = 渲染缺陷）", "better": "lower" },
+    "dangerCoarse": { "unit": "块", "desc": "可见、写深度、且比该视野最细就绪瓦片更粗的瓦片数（会从上方糊住清晰地形的架空弦）", "better": "lower" },
+    "settleSeconds": { "unit": "秒", "desc": "最后一次操作后，队列/请求/候场全部排空且糊斑清零所需时间（收敛速度）", "better": "lower" },
+    "dupTileRatio": { "unit": "比例", "desc": "同一瓦片 URL 重复请求占比（0=无浪费）", "better": "lower" },
+    "fpsMin": { "unit": "fps", "desc": "记录到的最低帧率。headless 软件渲染下数值偏低，仅作观测", "better": "higher" },
+    "interactingStuck": { "unit": "次", "desc": "cameraInteracting 为真但相机静止的采样次数（手势标志卡死检测，应恒为 0）", "better": "lower" },
+    "visSize": { "unit": "块", "desc": "可见集大小", "better": "—" }
+  },
+  "scenarios": [
+    {
+      "id": "zoom-in",
+      "title": "拉近 20 步后静置（大跨度 LOD 换代）",
+      "steps": [
+        { "op": "zoomIn", "steps": 20, "intervalMs": 250 },
+        { "op": "settle" }
+      ],
+      "expect": {
+        "blurRatioFinal": { "max": 0.02 },
+        "uncoveredRatioFinal": { "max": 0.01 },
+        "dangerCoarse": { "max": 0 },
+        "settleSeconds": { "max": 45 },
+        "dupTileRatio": { "max": 0.35 },
+        "interactingStuck": { "max": 0 }
+      }
+    },
+    {
+      "id": "tilt-low",
+      "title": "拉近后压低视角（斜视锥 + 地平线）",
+      "steps": [
+        { "op": "zoomIn", "steps": 13, "intervalMs": 250 },
+        { "op": "tilt", "steps": 6, "dy": -50 },
+        { "op": "settle" }
+      ],
+      "expect": {
+        "blurRatioFinal": { "max": 0.02 },
+        "uncoveredRatioFinal": { "max": 0.01 },
+        "dangerCoarse": { "max": 0 },
+        "settleSeconds": { "max": 45 },
+        "interactingStuck": { "max": 0 }
+      }
+    },
+    {
+      "id": "pan-near",
+      "title": "朝相机近端平移（右键向下拖）3 轮",
+      "steps": [
+        { "op": "zoomIn", "steps": 13, "intervalMs": 250 },
+        { "op": "tilt", "steps": 6, "dy": -50 },
+        { "op": "pan", "dir": "near", "rounds": 3, "dy": 120 },
+        { "op": "settle" }
+      ],
+      "expect": {
+        "blurRatioFinal": { "max": 0.03 },
+        "uncoveredRatioFinal": { "max": 0.01 },
+        "dangerCoarse": { "max": 0 },
+        "settleSeconds": { "max": 45 },
+        "interactingStuck": { "max": 0 }
+      }
+    },
+    {
+      "id": "pan-far",
+      "title": "朝相机远端平移（右键向上拖）3 轮",
+      "steps": [
+        { "op": "zoomIn", "steps": 13, "intervalMs": 250 },
+        { "op": "tilt", "steps": 6, "dy": -50 },
+        { "op": "pan", "dir": "far", "rounds": 3, "dy": 120 },
+        { "op": "settle" }
+      ],
+      "expect": {
+        "blurRatioFinal": { "max": 0.03 },
+        "uncoveredRatioFinal": { "max": 0.01 },
+        "dangerCoarse": { "max": 0 },
+        "settleSeconds": { "max": 45 },
+        "interactingStuck": { "max": 0 }
+      }
+    },
+    {
+      "id": "rotate",
+      "title": "水平转动 4 轮（左右交替，视野横扫）",
+      "steps": [
+        { "op": "zoomIn", "steps": 13, "intervalMs": 250 },
+        { "op": "tilt", "steps": 6, "dy": -50 },
+        { "op": "rotate", "rounds": 4, "dx": 60 },
+        { "op": "settle" }
+      ],
+      "expect": {
+        "blurRatioFinal": { "max": 0.03 },
+        "uncoveredRatioFinal": { "max": 0.01 },
+        "dangerCoarse": { "max": 0 },
+        "settleSeconds": { "max": 45 },
+        "interactingStuck": { "max": 0 }
+      }
+    },
+    {
+      "id": "zoom-out-in",
+      "title": "拉远 12 步再拉近 12 步（LOD 换代往返）",
+      "steps": [
+        { "op": "zoomIn", "steps": 13, "intervalMs": 250 },
+        { "op": "tilt", "steps": 6, "dy": -50 },
+        { "op": "zoomOut", "steps": 12, "intervalMs": 250 },
+        { "op": "zoomIn", "steps": 12, "intervalMs": 250 },
+        { "op": "settle" }
+      ],
+      "expect": {
+        "blurRatioFinal": { "max": 0.03 },
+        "uncoveredRatioFinal": { "max": 0.01 },
+        "dangerCoarse": { "max": 0 },
+        "settleSeconds": { "max": 45 },
+        "dupTileRatio": { "max": 0.6 },
+        "interactingStuck": { "max": 0 }
+      }
+    }
+  ]
+}

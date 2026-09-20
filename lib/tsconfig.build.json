@@ -1,0 +1,30 @@
+// three-gis 库构建专用配置。
+//
+// 只编译 lib/index.ts 可达的源码，输出 ESM JS + d.ts 到 .rollup-tmp/，再由 rollup 打包。
+// 刻意不继承根 tsconfig：这里没有 @/ 路径别名，一旦 lib 里重新引入 Next 项目别名就会构建失败。
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "incremental": false,
+    "sourceMap": true,
+    "rootDir": ".",
+    "outDir": ".rollup-tmp"
+  },
+  "include": ["index.ts"],
+  "exclude": ["node_modules", "dist", ".rollup-tmp", "sources/examples"]
+}

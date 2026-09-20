@@ -10,6 +10,10 @@ export interface ScheduledRequestOptions<T> {
   /** Lower values are scheduled first. */
   priority: number;
   signal?: AbortSignal;
+  /** Optional shared throttle group. Requests with the same value share one limit. */
+  requestGroup?: string;
+  /** Per-group override for this request. */
+  maximumRequestsPerServer?: number;
   /** Keep the request under the per-server limit. Defaults to true. */
   throttleByServer?: boolean;
   load: (signal?: AbortSignal) => Promise<T>;
@@ -21,6 +25,7 @@ interface ScheduledTask {
   priority: number;
   signal?: AbortSignal;
   throttleByServer: boolean;
+  maximumRequestsPerServer: number;
   started: boolean;
   cancelled: boolean;
   run: () => void;
@@ -57,6 +62,8 @@ export class RequestScheduler {
   private pumpScheduled = false;
   private maximumRequests: number;
   private maximumRequestsPerServer: number;
+  /** 共享限流组的全局并发上限（同一服务/token 的所有层共用一个总控）。 */
+  private groupLimits = new Map<string, number>();
 
   constructor(options: RequestSchedulerOptions = {}) {
     this.maximumRequests = options.maximumRequests ?? 50;
@@ -81,9 +88,37 @@ export class RequestScheduler {
     return this.activeByServer.get(getRequestServerKey(url)) ?? 0;
   }
 
+  /**
+   * 注册一个共享限流组的全局并发上限。
+   *
+   * 用于"一个服务 token 被多个图层共用"的场景（如天地图：影像层 + 注记层 +
+   * 地形图层各自都有请求）。注册后该组内所有请求共用一个总控并发数，
+   * 实际生效值为 min(组级上限, 单请求携带的 maximumRequestsPerServer)。
+   */
+  registerGroupLimit(group: string, maximumRequestsPerServer: number): void {
+    if (!Number.isInteger(maximumRequestsPerServer) || maximumRequestsPerServer < 1) {
+      throw new RangeError("maximumRequestsPerServer must be an integer greater than 0.");
+    }
+    this.groupLimits.set(group, maximumRequestsPerServer);
+  }
+
+  getGroupLimit(group: string): number | undefined {
+    return this.groupLimits.get(group);
+  }
+
   schedule<T>(options: ScheduledRequestOptions<T>): Promise<T> {
-    const serverKey = getRequestServerKey(options.url);
+    const serverKey = options.requestGroup ?? getRequestServerKey(options.url);
     const throttleByServer = options.throttleByServer !== false;
+    const maximumRequestsPerServer =
+      options.maximumRequestsPerServer ?? this.maximumRequestsPerServer;
+    if (!Number.isInteger(maximumRequestsPerServer) || maximumRequestsPerServer < 1) {
+      throw new RangeError("maximumRequestsPerServer must be an integer greater than 0.");
+    }
+    // 组级总控：注册过全局上限的组，实际生效取两者较小值
+    const groupLimit = options.requestGroup
+      ? this.groupLimits.get(options.requestGroup)
+      : undefined;
+    const effectiveMaximum = Math.min(maximumRequestsPerServer, groupLimit ?? maximumRequestsPerServer);
 
     return new Promise<T>((resolve, reject) => {
       let settled = false;
@@ -115,6 +150,7 @@ export class RequestScheduler {
         priority: options.priority,
         signal: options.signal,
         throttleByServer,
+        maximumRequestsPerServer: effectiveMaximum,
         started: false,
         cancelled: false,
         run: () => {
@@ -183,7 +219,7 @@ export class RequestScheduler {
         ? (this.activeByServer.get(task.serverKey) ?? 0)
         : 0;
       const serverHasCapacity =
-        !task.throttleByServer || serverCount < this.maximumRequestsPerServer;
+        !task.throttleByServer || serverCount < task.maximumRequestsPerServer;
 
       if (!serverHasCapacity) {
         index++;

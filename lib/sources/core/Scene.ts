@@ -26,7 +26,7 @@ export type SceneLoadCallback = (success?: boolean, message?: string | Error) =>
  * call `ready()` or `load()` before accessing the renderer and camera.
  */
 export class Scene {
-  public readonly container: HTMLDivElement;
+  public readonly container: HTMLElement;
   public scene: THREE.Scene | null = null;
   public camera: THREE.PerspectiveCamera | null = null;
   public renderer: THREE.WebGLRenderer | null = null;
@@ -40,7 +40,7 @@ export class Scene {
   private gisController: GISOrbitController | null = null;
   private destroyed = false;
 
-  constructor(container: HTMLDivElement, options: SceneOptions = {}) {
+  constructor(container: HTMLElement, options: SceneOptions = {}) {
     this.container = container;
     this.layerTree = new LayerTree();
     this.threeUtils = ThreeUtils(container, {

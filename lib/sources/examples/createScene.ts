@@ -98,6 +98,7 @@ export function createScene(container: HTMLDivElement) {
         zoom,
         cameraTarget,
         cameraDistance,
+        camera,
       );
 
       // WMS 图层与底图共享视口更新逻辑
@@ -107,6 +108,7 @@ export function createScene(container: HTMLDivElement) {
         zoom,
         cameraTarget,
         cameraDistance,
+        camera,
       );
 
       // TMS / WMTS 同理
@@ -116,6 +118,7 @@ export function createScene(container: HTMLDivElement) {
         zoom,
         cameraTarget,
         cameraDistance,
+        camera,
       );
       wmtsLayer?.updateTilesInView(
         [bounds.west, bounds.east],
@@ -123,6 +126,7 @@ export function createScene(container: HTMLDivElement) {
         zoom,
         cameraTarget,
         cameraDistance,
+        camera,
       );
 
       // Cesium 地形图层
@@ -133,6 +137,10 @@ export function createScene(container: HTMLDivElement) {
         cameraTarget,
         cameraDistance,
         camera.position,
+        undefined,
+        camera,
+        container.clientWidth || 1,
+        container.clientHeight || 1,
       );
 
       // 地形已加载时隐藏平面底图，避免双层混合产生"一块一块"的视觉

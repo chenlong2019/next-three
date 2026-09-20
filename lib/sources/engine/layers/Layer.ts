@@ -1,4 +1,4 @@
-import { LayerTreeNode } from "@/lib/sources/types/layers";
+import { LayerTreeNode } from "../../types/layers";
 import { BaseGraphic } from "../graphic/BaseGraphic";
 import { v4 as uuidv4 } from "uuid";
 import { LayerGroup } from "./LayerGroup";

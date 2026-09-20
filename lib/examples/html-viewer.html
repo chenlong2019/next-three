@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>three-gis · 三行初始化（createViewer）</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b1020;
+        color: #e8ecf4;
+        font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #app {
+        position: absolute;
+        inset: 0;
+      }
+      #hud {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: rgba(10, 16, 32, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      #hud b {
+        color: #7fd1ff;
+      }
+      #hud code {
+        color: #ffd479;
+      }
+      #hud button {
+        margin: 6px 6px 0 0;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(127, 209, 255, 0.12);
+        color: #e8ecf4;
+        cursor: pointer;
+        font: inherit;
+      }
+      #hud button:hover {
+        background: rgba(127, 209, 255, 0.24);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">
+      <b>three-gis</b> · <code>createViewer</code> 一站式初始化<br />
+      下面这 6 行就是全部初始化代码，帧循环由库内部接管<br />
+      影像需要天地图 token，请用 <code>?tk=你的token</code> 打开本页<br />
+      <button data-center="116.4,39.9" data-height="1500000">北京</button>
+      <button data-center="121.47,31.23" data-height="600000">上海</button>
+      <button data-center="118.1371,24.49" data-height="120000">厦门</button>
+      <button data-action="pitch">切换斜视 55°</button>
+      <div id="status">初始化中…</div>
+    </div>
+
+    <!-- 全局构建把 three 一起打进来了，页面只需要这一个 script -->
+    <script src="../dist/three-gis.global.js"></script>
+    <script>
+      (function () {
+        var status = document.getElementById("status");
+        var setStatus = function (text) {
+          if (status) status.textContent = text;
+        };
+
+        // 天地图 token 不在仓库内置（避免密钥进入公开仓库）。
+        // 打开页面时加 ?tk=你的token，或在同页脚本里预先设置
+        // window.__THREE_GIS_CONFIG__ = { tiandituToken: "..." }。
+        var tiandituToken = "";
+        if (window.__THREE_GIS_CONFIG__ && window.__THREE_GIS_CONFIG__.tiandituToken) {
+          tiandituToken = String(window.__THREE_GIS_CONFIG__.tiandituToken);
+        } else {
+          try {
+            tiandituToken = new URLSearchParams(window.location.search).get("tk") || "";
+          } catch (error) {
+            tiandituToken = "";
+          }
+        }
+
+        ThreeGIS.createViewer("app", {
+          center: [116.4, 39.9],
+          height: 1500000,
+          imagery:
+            "https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=" + tiandituToken,
+        })
+          .then(function (viewer) {
+            var pitch = 90;
+
+            document.querySelectorAll("#hud button").forEach(function (button) {
+              button.addEventListener("click", function () {
+                var action = button.getAttribute("data-action");
+                if (action === "pitch") {
+                  pitch = pitch === 90 ? 55 : 90;
+                  viewer.setView({ pitch: pitch });
+                  setStatus("斜视 " + pitch + "°");
+                  return;
+                }
+                var center = button.getAttribute("data-center").split(",");
+                viewer.flyTo({
+                  center: [Number(center[0]), Number(center[1])],
+                  height: Number(button.getAttribute("data-height")),
+                });
+                setStatus("飞向 " + button.textContent);
+              });
+            });
+
+            // 自动化脚本用的探针：确认图层真的挂进了场景、相机真的就位
+            window.__threeGisDemo = {
+              viewer: viewer,
+              scene: viewer.scene,
+              imagery: viewer.layers.imagery[0] ?? null,
+            };
+            window.__threeGisReady = true;
+            setStatus("场景就绪 · WebGL 已初始化 · 影像图层 " + viewer.layers.imagery.length + " 个");
+          })
+          .catch(function (error) {
+            window.__threeGisError = String((error && error.stack) || error);
+            setStatus("初始化失败：" + ((error && error.message) || error));
+          });
+
+        window.addEventListener("beforeunload", function () {
+          var demo = window.__threeGisDemo;
+          if (demo && demo.viewer) demo.viewer.destroy();
+        });
+      })();
+    </script>
+  </body>
+</html>

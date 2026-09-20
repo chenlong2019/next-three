@@ -1,0 +1,108 @@
+{
+  "generatedAt": "2026-09-20T02:15:12.891Z",
+  "url": "http://localhost:12345/examples/cesium-terrain/fullscreen/",
+  "scenarios": {
+    "zoom-in": {
+      "agg": {
+        "blurRatioPeak": 0.25,
+        "blurRatioFinal": 0,
+        "uncoveredRatioPeak": 0,
+        "uncoveredRatioFinal": 0,
+        "dangerCoarseMax": 0,
+        "notReadyVisibleMax": 0,
+        "visSizeMax": 7,
+        "dupTileRatio": 0,
+        "reqTileTotal": 114,
+        "fpsMin": 18,
+        "interactingStuck": 0,
+        "settleSeconds": 8.1,
+        "settled": true
+      }
+    },
+    "tilt-low": {
+      "agg": {
+        "blurRatioPeak": 0.0469,
+        "blurRatioFinal": 0,
+        "uncoveredRatioPeak": 0,
+        "uncoveredRatioFinal": 0,
+        "dangerCoarseMax": 0,
+        "notReadyVisibleMax": 0,
+        "visSizeMax": 12,
+        "dupTileRatio": 0,
+        "reqTileTotal": 0,
+        "fpsMin": 11,
+        "interactingStuck": 0,
+        "settleSeconds": 3,
+        "settled": true
+      }
+    },
+    "pan-near": {
+      "agg": {
+        "blurRatioPeak": 0,
+        "blurRatioFinal": 0,
+        "uncoveredRatioPeak": 0,
+        "uncoveredRatioFinal": 0,
+        "dangerCoarseMax": 0,
+        "notReadyVisibleMax": 0,
+        "visSizeMax": 15,
+        "dupTileRatio": 0,
+        "reqTileTotal": 0,
+        "fpsMin": 10,
+        "interactingStuck": 0,
+        "settleSeconds": 2,
+        "settled": true
+      }
+    },
+    "pan-far": {
+      "agg": {
+        "blurRatioPeak": 0,
+        "blurRatioFinal": 0,
+        "uncoveredRatioPeak": 0,
+        "uncoveredRatioFinal": 0,
+        "dangerCoarseMax": 0,
+        "notReadyVisibleMax": 0,
+        "visSizeMax": 12,
+        "dupTileRatio": 0,
+        "reqTileTotal": 0,
+        "fpsMin": 11,
+        "interactingStuck": 0,
+        "settleSeconds": 2,
+        "settled": true
+      }
+    },
+    "rotate": {
+      "agg": {
+        "blurRatioPeak": 0,
+        "blurRatioFinal": 0,
+        "uncoveredRatioPeak": 0,
+        "uncoveredRatioFinal": 0,
+        "dangerCoarseMax": 0,
+        "notReadyVisibleMax": 0,
+        "visSizeMax": 13,
+        "dupTileRatio": 0,
+        "reqTileTotal": 0,
+        "fpsMin": 6,
+        "interactingStuck": 0,
+        "settleSeconds": 2,
+        "settled": true
+      }
+    },
+    "zoom-out-in": {
+      "agg": {
+        "blurRatioPeak": 0,
+        "blurRatioFinal": 0,
+        "uncoveredRatioPeak": 0,
+        "uncoveredRatioFinal": 0,
+        "dangerCoarseMax": 0,
+        "notReadyVisibleMax": 0,
+        "visSizeMax": 12,
+        "dupTileRatio": 0,
+        "reqTileTotal": 20,
+        "fpsMin": 11,
+        "interactingStuck": 0,
+        "settleSeconds": 2,
+        "settled": true
+      }
+    }
+  }
+}

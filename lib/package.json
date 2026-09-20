@@ -1,0 +1,56 @@
+{
+  "name": "three-gis",
+  "version": "0.1.0",
+  "description": "浏览器端三维 GIS / CAD 空间引擎：Web Mercator 坐标、栅格瓦片、Cesium quantized-mesh 地形、3D Tiles、GeoJSON 与基础图元。框架无关，可用于原生 HTML、Vue、React。",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/three-gis.cjs",
+  "module": "./dist/three-gis.mjs",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/three-gis.global.min.js",
+  "jsdelivr": "./dist/three-gis.global.min.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/three-gis.mjs",
+      "require": "./dist/three-gis.cjs",
+      "default": "./dist/three-gis.mjs"
+    },
+    "./global": "./dist/three-gis.global.js",
+    "./global.min": "./dist/three-gis.global.min.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "three",
+    "threejs",
+    "gis",
+    "cad",
+    "web-mercator",
+    "tiles",
+    "3d-tiles",
+    "terrain",
+    "cesium-terrain",
+    "geojson"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "three": ">=0.162.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.162.0",
+    "uuid": "^14.0.1"
+  },
+  "scripts": {
+    "build": "node ../scripts/build-lib.mjs",
+    "build:watch": "node ../scripts/build-lib.mjs --watch",
+    "pack:check": "npm pack --dry-run"
+  }
+}

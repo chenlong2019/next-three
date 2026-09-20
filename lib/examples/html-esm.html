@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>three-gis · 原生 HTML（ESM + importmap）</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b1020;
+        color: #e8ecf4;
+        font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #app {
+        position: absolute;
+        inset: 0;
+      }
+      #hud {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: rgba(10, 16, 32, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        pointer-events: none;
+      }
+      #hud b {
+        color: #7fd1ff;
+      }
+      #hud code {
+        color: #ffd479;
+      }
+    </style>
+
+    <!--
+      ESM 产物把 three 保留为外部依赖（避免和业务项目里的 three 出现两份实例），
+      所以浏览器直连时需要 importmap 兜住 "three" 与 "three/" 前缀。
+      在 Vite / webpack / Next 里由打包器解析，不需要这段 importmap。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../node_modules/three/build/three.module.js",
+          "three/": "../../node_modules/three/",
+          "three/addons/": "../../node_modules/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">
+      <b>three-gis</b> · 原生 HTML + <code>import { Scene } from "three-gis"</code><br />
+      ESM 产物 + importmap，three 由页面自行提供<br />
+      <span id="status">初始化中…</span>
+    </div>
+
+    <script src="./demo-boot.js"></script>
+    <script type="module">
+      import * as ThreeGIS from "../dist/three-gis.mjs";
+      window.bootThreeGis(ThreeGIS);
+    </script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-import { ToolType } from "@/types/tool";
+import { ToolType } from "../../types/tool";
 import { DrawingManager } from "../three/DrawingManager";
 
 /**

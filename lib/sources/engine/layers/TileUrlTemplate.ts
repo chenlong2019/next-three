@@ -1,6 +1,22 @@
 export const DEFAULT_TILE_SUBDOMAINS: readonly string[] = ["0", "1", "2", "3"];
 
 /**
+ * Return a stable throttle group for templates that distribute the same
+ * service across `{s}` subdomains. Without this, each hostname gets its own
+ * per-origin concurrency allowance.
+ */
+export function getTileRequestGroup(template?: string): string | undefined {
+  if (!template?.includes("{s}")) return undefined;
+
+  try {
+    const parsed = new URL(template.replace("{s}", "0"));
+    return `tile-template:${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return `tile-template:${template.replace("{s}", "*")}`;
+  }
+}
+
+/**
  * Expands the XYZ placeholders supported by tile templates.
  * The optional {s} placeholder is selected consistently from tile coordinates.
  */
